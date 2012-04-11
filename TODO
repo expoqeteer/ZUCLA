@@ -1,0 +1,6 @@
+Stuff that still needs work:
+* README
+* Proper setup and RPM packaging
+* Better/more error handling
+* Security review
+* Command shell that can maintain login credentials
