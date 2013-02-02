@@ -28,7 +28,8 @@
 #
 ###############################################################################
 
-from zucla.zfcli import ZfCLI
+from zucla.zfcli import ZfCLI, ZfCLIException
+from zucla.zflib import ZfLibException
 import argparse
 from os.path import basename, dirname
 
@@ -118,6 +119,6 @@ class CreateGallery(ZfCLI):
                 else:
                     print "Error:", api_response['error']['message']
     
-            except ZfLibException as e:
+            except (ZfCLIException, ZfLibException) as e:
                 print
                 print e.msg
