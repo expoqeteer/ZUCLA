@@ -2,7 +2,7 @@
 #
 #    For more information, see http://github.com/bryanmason/ZUCLA
 # 
-#    Copyright (c) 2011, 2012 Bryan Mason
+#    Copyright (c) 2011-2013 Bryan Mason
 #
 #    This file is part of ZUCLA.
 #   
@@ -24,6 +24,28 @@
 #    http://www.zenfolio.com/zf/tools/api.aspx.  ZUCLA and Zenfolio are
 #    not affiliated and Zenfiolio does not endorse the use of ZUCLA to 
 #    access the Zenfiolo service.
+#
+###############################################################################
+#
+# Function List:
+#
+# _open_connection (INTERNAL):          Open a connection to the zf host
+# debug:                                Get/set debugging state
+# zf_host:                              Get/set host name
+# api_path:                             Get/Set ZF API Path
+# state:                                Get API state
+# zfapi_error:                          Get API Error object
+# zfapi_response:                       Get last API response
+# success:                              Get success of last method call
+# _make_call (INTERNAL):                Make a call to the API
+# Authenticate:                         Challenge/Response auth
+# AuthenticatePlain:                    Plain text auth
+# LoadGroupHierarchy:                   Load the complete GroupHierarchy
+# LoadPhotoSet:                         LoadPhotoSet
+# UploadPhototoURL:                     Upload a photo to the Gallery URL
+# CreatePhotoSet:                       CreatePhotoSet
+# CreateGroup:                          CreateGroup
+# DeletePhoto:                          DeletePhoto
 #
 ###############################################################################
 
@@ -160,6 +182,25 @@ class ZfAPI:
         return self._state
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def reset(self):
+        """
+        Reset the state of the API to its initial state.
+
+        Parameters: None
+        Returns: Nothing
+        """
+
+        if ( self._conn ):
+            self._conn.close()
+        self._state = self.Closed
+        self._conn = None
+        self._last_http_response = None
+        self._last_zfresponse = None
+        self._zf_token = None
+
+        self._open_connection()
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def zfapi_error(self):
         """
         Get the current Zenfolio API error structure
@@ -286,7 +327,7 @@ class ZfAPI:
         """
 
         if ( self.debug ):
-            print("GetChallenge (", username, ") ====================")
+            print(">>>>>> GetChallenge (", username, ")")
 
         if username != "" :
             self._username = username
@@ -311,7 +352,7 @@ class ZfAPI:
         """
 
         if ( self.debug ):
-            print("Authenticate (<...shhh...>)  ====================")
+            print(">>>>>> Authenticate (<...shhh...>)")
 
         if ( self._state == self.Closed ):
             raise ZfAPIException(0, "No challenge accepted.")
@@ -372,8 +413,7 @@ class ZfAPI:
         """
 
         if ( self.debug ):
-            print("AuthenticatePlain( <...shhh...> ,", username, \
-                  ") ====================")
+            print(">>>>>> AuthenticatePlain( <...shhh...> ,", username, ")")
 
         if username != "" :
             self._username = username
@@ -408,7 +448,7 @@ class ZfAPI:
         """
         
         if ( self.debug ):
-            print "LoadGroupHierarchy(", username, ") ===================="
+            print ">>>>>> LoadGroupHierarchy(", username, ")"
 
         if username != "" :
             self._username = username
@@ -417,6 +457,38 @@ class ZfAPI:
 
         self._make_call("LoadGroupHierarchy", [self._username])
         return self.success()
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def LoadPhotoSet(self, photoset_id, information_level, include_photos):
+        """
+        Get a snapshot of a photo set (gallery or collection)
+        
+        Parameters:
+        photoset_id: ID of the photoset to load
+        information_level: Level of information to return.  May be
+                           "Level1", "Level2", or "Full".
+        include_photos: True to include photo information.  False otherwise.
+
+        Returns: A photoset shapshot in the response.
+        """
+
+        if ( self.debug ):
+            print ">>>>>> LoadPhotoSet(", photoset_id, ",", \
+                information_level, ",", include_photos, ")"
+
+        # Check the parameters
+        if ( photoset_id == None or photoset_id == ""
+             or information_level == None or information_level == ""
+             or include_photos == None or include_photos == "" ):
+            return 0
+
+        self._make_call("LoadPhotoSet", 
+                        [photoset_id, information_level, include_photos])
+
+        if ( self.success() ):
+            return self._last_zfresponse['result']
+        else:
+            return None
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def UploadPhotoToURL(self, filepath, upload_path):
@@ -431,10 +503,10 @@ class ZfAPI:
         """
         
         if ( self.debug ):
-            print "UploadPhotoToURL(", \
+            print ">>>>>> UploadPhotoToURL(", \
                 filepath, ",", \
                 upload_path, \
-                ") ===================="
+                ")"
 
         # Check the parameters
         if ( filepath == None or filepath == "" or 
@@ -493,16 +565,12 @@ class ZfAPI:
         """
 
         if ( self.debug ):
-            print "CreatePhotoSet(", \
-                group_id, ",", \
-                type, ",", \
-                psu, \
-                ") ===================="
+            print ">>>>>> CreatePhotoSet(", group_id, ",", type, ",", psu, ")"
             
         if ( group_id == None or group_id == "" or
              type == None or type == "" or
              psu == None ):
-            return 0
+            return None
 
         updater = {}
         if ( psu.Title != None):
@@ -518,7 +586,10 @@ class ZfAPI:
             
         self._make_call("CreatePhotoSet", [group_id, type, updater])
         
-        return self.success()
+        if ( self.success() ):
+            return self._last_zfresponse['result']
+        else:
+            return None
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def CreateGroup(self, parent_id, gu):
@@ -533,10 +604,7 @@ class ZfAPI:
         """
 
         if ( self.debug ):
-            print "CreateGroup(", \
-                parent_id, ",", \
-                gu, \
-                ") ===================="
+            print ">>>>>> CreateGroup(", parent_id, ",", gu, ")"
             
         if ( parent_id == None or parent_id == "" or
              gu == None ):
@@ -551,6 +619,31 @@ class ZfAPI:
             updater['CustomReference'] = gu.CustomReference
 
         self._make_call("CreateGroup", [parent_id, updater])
+        
+        if ( self.success() ):
+            return self._last_zfresponse['result']
+        else:
+            return None
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def DeletePhoto(self, photo_id):
+        """
+        Delete a photo
+        
+        Parameters:
+        photo_id: Identifier of the photo to delete.
+
+        Returns:
+        True on success, false otherwise
+        """
+
+        if ( self.debug ):
+            print ">>>>>> DeletePhoto(", photo_id, ",", gu, ")"
+            
+        if ( photo_id == None or photo_id == "" ):
+            return 0
+        
+        self._make_call("DeletePhoto", [photo_id])
         
         return self.success()
 

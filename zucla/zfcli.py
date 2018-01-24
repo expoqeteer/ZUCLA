@@ -38,8 +38,8 @@ class ZfCLI(ZfLib):
     The base class for all commands.
     """
 
-    _parser = None;
-    the_args = None;
+    _parser = None
+    the_args = None
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def __init__(self, description):
@@ -51,13 +51,17 @@ class ZfCLI(ZfLib):
         self._parser = argparse.ArgumentParser(description)
         self._parser.add_argument("-u", "--user", action="store",
                                   help="Zenfolio login name.",
-                                  required=True)
+                                  required=True);
         self._parser.add_argument("--password", action="store",
                                   help="Password for Zenfolio user.",
                                   required=False)
+        self._parser.add_argument("--nossl", action="store_false",
+                                  dest='ssl',
+                                  help="Disable SSL (default is SSL).",
+                                  required=False)
         self._parser.add_argument("--debug", action="store_true",
-                                  help="Show debugging information",
-                                  required=False);
+                                  help="Show debugging information.",
+                                  required=False)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def parse_args(self):
 
@@ -65,8 +69,10 @@ class ZfCLI(ZfLib):
         self.the_args = self._parser.parse_args()
 
         # Create the Zenfolio Library object
-        ZfLib.__init__(self, debug=self.the_args.debug, 
-                       username=self.the_args.user)
+        ZfLib.__init__(self, debug=self.the_args.debug,
+                       username=self.the_args.user,
+                       ssl=self.the_args.ssl)
+
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def get_password(self):

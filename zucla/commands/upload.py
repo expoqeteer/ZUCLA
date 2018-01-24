@@ -67,7 +67,7 @@ class Upload(ZfCLI):
             # If we are supposed to create the gallery . . . 
             if ( self.the_args.create ):
                 # And the gallery doesn't exist, then create it.
-                if ( self.get_group_id(self.the_args.gallery) == None ):
+                if ( self.get_group(self.the_args.gallery) == None ):
                     gallery_title = basename(self.the_args.gallery)
                     parent_path = dirname(self.the_args.gallery)
                     print "Creating gallery \"" + gallery_title + "\" "
